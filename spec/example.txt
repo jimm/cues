@@ -1,0 +1,46 @@
+# Here's a sample Cues file. This text is ignored. This sample file
+# uses the abbreviations for each of the commands ("t" for tempo,
+# "c" for cue).
+
+t 86     # Set tempo (120 is the default)
+3/4      # Set the time signature (4/4 is the default)
+v 4      # Set the click subdivision. 4 == quarter note (default),
+         # 8 == eighth, etc.
+
+# Count-in. First bar contains four clicks. Second bar contains four
+# notes, one on each beat: "intro", "two", "three", and "four". See
+# "cue" below for a slightly shorter way to write this.
+m 1
+intro
+23
+
+# Intro
+m 8      # 8 bars of intro
+
+# A cue. Because there are four notes in this cue ("verse", "two",
+# "three", and "four"), we travel "back in time" four beats to play
+# them. On the 7th measure of the intro, the four notes will be
+# played one per beat.
+cue verse 23  # could type "c" instead of "cue"
+
+# Verse 1
+m 16
+
+# Verse 2 with cue to the chorus
+m 16
+c chorus 23
+
+# Chorus with cue to the next verse. Since comment lines and blank
+# lines are ignored, it doesn't matter if you put the cue line right
+# after the chorus, or right before the verse. It's personal preference.
+m 8
+
+# Verse with a cue before it
+c verse 23
+m 16
+
+# Bridge, with cue before it
+c bridge 23
+m 16
+
+# ... the rest of the song ...
