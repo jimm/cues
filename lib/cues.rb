@@ -6,8 +6,10 @@ include WaveFile
 
 SAMPLES_DIR = File.join(__dir__, '../samples')
 OUTPUT_FORMAT = Format.new(:mono, :pcm_16, 48_000)
+MULTI_BEAT_NAMES_REGEX = /^[1-4r]+$/
 
 NAMES = {
+  # Beat numbers
   '1' => 'one.wav',
   '2' => 'two.wav',
   '3' => 'three.wav',
@@ -16,12 +18,16 @@ NAMES = {
   'two' => 'two.wav',
   'three' => 'three.wav',
   'four' => 'four.wav',
+  # Section names
   'intro' => 'intro.wav',
   'verse' => 'verse.wav',
   'chorus' => 'chorus.wav',
   'bridge' => 'bridge.wav',
   'end' => 'end.wav',
-  'rest' => nil,             # silence; just advances the beat
+  # Rests
+  'rest' => nil, # silence; just advances the beat
+  'r' => nil,
+  # Metronome
   '_md' => 'clave-high.wav', # metronome downbeat
   '_mk' => 'clave-low.wav'   # metronome click (other beats)
 }.freeze
@@ -59,20 +65,20 @@ class Cues
         @time_signature = [::Regexp.last_match(1).to_i, ::Regexp.last_match(2).to_i]
       when 'v', 'subdivision'
         @subdivision = words[0].to_i
-      when 'm', 'measure'
+      when 'm', 'meas', 'measure', 'measures'
         insert_measures(words[0].to_i)
       when 'b', 'beat'
         insert_metronome(words[0].to_i)
       when 'c', 'cue'
         insert_cue(words)
-      when /^[1-4]+$/
+      when MULTI_BEAT_NAMES_REGEX
         command.each_char { |ch| insert_name(ch) }
       when 'd', 'downbeat'
         set_clave_sample('_md', words[0])
       when 'k', 'click'
         set_clave_sample('_mk', words[0])
       else
-        insert_name(command)
+        insert_name(command) # also handles r/rest
       end
     end
 
@@ -87,7 +93,7 @@ class Cues
 
     words.each do |word|
       case word
-      when /^[1-4]+$/
+      when MULTI_BEAT_NAMES_REGEX
         word.each_char { |ch| insert_name(ch) }
       else
         insert_name(word)
@@ -201,7 +207,7 @@ class Cues
   end
 
   def multi_beat_names?(word)
-    word =~ /^[1-4]+$/
+    word =~ MULTI_BEAT_NAMES_REGEX
   end
 
   def report_error(message)
