@@ -155,7 +155,11 @@ m 16
 ## To Do
 
 - Create the additional samples (5, 6, 7, 8, etc.)
+
 - Add a way to define a section with a name and length, and use that to
   refer to an entire section's worth of metronome clicks. For example, if a
   section was defined with name = "verse" and length = "16" then you could
   type "verse" and it'd be the same as typing "measures 16".
+
+  Perhaps let sections be blocks (multiple names/length, or just multiple
+  commands) --- a simplified macro system.
