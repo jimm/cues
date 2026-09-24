@@ -10,26 +10,16 @@ MULTI_BEAT_NAMES_REGEX = /^[1-4r]+$/
 
 NAMES = {
   # Beat numbers
-  '1' => 'one.wav',
-  '2' => 'two.wav',
-  '3' => 'three.wav',
-  '4' => 'four.wav',
-  'one' => 'one.wav',
-  'two' => 'two.wav',
-  'three' => 'three.wav',
-  'four' => 'four.wav',
-  # Section names
-  'intro' => 'intro.wav',
-  'verse' => 'verse.wav',
-  'chorus' => 'chorus.wav',
-  'bridge' => 'bridge.wav',
-  'end' => 'end.wav',
+  '1' => 'one',
+  '2' => 'two',
+  '3' => 'three',
+  '4' => 'four',
   # Rests
   'rest' => nil, # silence; just advances the beat
   'r' => nil,
   # Metronome
-  '_md' => 'clave-high.wav', # metronome downbeat
-  '_mk' => 'clave-low.wav'   # metronome click (other beats)
+  '_md' => 'clave-high', # metronome downbeat
+  '_mk' => 'clave-low'   # metronome click (other beats)
 }.freeze
 
 class Cues
@@ -42,7 +32,7 @@ class Cues
     @subdivision = 4
     @names = NAMES.dup
     @beat = 0
-    @events = [] # { time: Float (seconds), filename: String }
+    @events = [] # { time: Float (seconds), sample_name: String }
     @sample_cache = {}
   end
 
@@ -119,15 +109,16 @@ class Cues
   end
 
   def insert_name(name)
-    if name == 'rest'
+    name = name.downcase
+    if %w[rest r].include?(name)
       @beat += 1
       return
     end
 
-    filename = @names[name]
-    report_error("name \"#{name}\" not found") if filename.nil?
+    sample_name = @names[name] || name
+    report_error("sample \"#{name}\" not found") unless sample_file_exists?(sample_name)
 
-    @events << { time: @beat * @seconds_per_beat, filename: filename }
+    @events << { time: @beat * @seconds_per_beat, sample_name: sample_name }
     @beat += 1
   end
 
@@ -137,24 +128,22 @@ class Cues
   def set_clave_sample(key, clave_name)
     report_error('missing clave sample name') if clave_name.nil?
 
-    filename = "clave-#{clave_name}.wav"
-    unless File.exist?(File.join(SAMPLES_DIR, filename))
-      report_error("clave sample \"#{filename}\" not found in #{SAMPLES_DIR}")
-    end
+    sample_name = "clave-#{clave_name}"
+    report_error("clave sample \"#{sample_name}\" not found in #{SAMPLES_DIR}") unless sample_file_exists?(sample_name)
 
-    @names[key] = filename
+    @names[key] = sample_name
   end
 
   def write_audio_file(out_path)
     total_frames = @events.reduce(0) do |max_frames, event|
-      samples = load_sample(event[:filename])
+      samples = load_sample(event[:sample_name])
       start_frame = (event[:time] * OUTPUT_FORMAT.sample_rate).round
       [max_frames, start_frame + samples.length].max
     end
 
     mixed = Array.new(total_frames, 0)
     @events.each do |event|
-      samples = load_sample(event[:filename])
+      samples = load_sample(event[:sample_name])
       start_frame = (event[:time] * OUTPUT_FORMAT.sample_rate).round
       samples.each_with_index do |sample, i|
         frame = start_frame + i
@@ -167,12 +156,12 @@ class Cues
     end
   end
 
-  def load_sample(filename)
-    @sample_cache[filename] ||= read_sample(filename)
+  def load_sample(sample_name)
+    @sample_cache[sample_name] ||= read_sample(sample_name)
   end
 
-  def read_sample(filename)
-    path = File.join(SAMPLES_DIR, filename)
+  def read_sample(sample_name)
+    path = sample_file(sample_name)
     raise "sample file not found: #{path}" unless File.exist?(path)
 
     samples = nil
@@ -208,6 +197,14 @@ class Cues
 
   def multi_beat_names?(word)
     word =~ MULTI_BEAT_NAMES_REGEX
+  end
+
+  def sample_file(name)
+    File.join(SAMPLES_DIR, "#{name}.wav")
+  end
+
+  def sample_file_exists?(name)
+    File.exist?(sample_file(name))
   end
 
   def report_error(message)

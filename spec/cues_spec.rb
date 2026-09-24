@@ -39,10 +39,53 @@ RSpec.describe Cues do
       cue_text = "d middle\nk low\nb 1\n"
       @c.build_cues_audio_file(StringIO.new(cue_text), TEST_OUTPUT_FILE)
 
-      expect(@c.names['_md']).to eq 'clave-middle.wav'
-      expect(@c.names['_mk']).to eq 'clave-low.wav'
+      expect(@c.names['_md']).to eq 'clave-middle'
+      expect(@c.names['_mk']).to eq 'clave-low'
     end
   end
+
+  context 'uses of sample_file_exists? throughout cues.rb' do
+    it 'insert_name accepts a name whose sample file exists' do
+      expect { @c.insert_name('one') }.not_to raise_error
+      expect(@c.instance_variable_get(:@events).last[:sample_name]).to eq 'one'
+    end
+
+    it 'insert_name reports an error and exits when the sample file is missing' do
+      silence_output do
+        expect { @c.insert_name('no-such-sample') }.to raise_error(SystemExit)
+      end
+    end
+
+    it 'insert_name looks up mapped names (e.g. "1" => "one") before checking the sample file' do
+      expect { @c.insert_name('1') }.not_to raise_error
+      expect(@c.instance_variable_get(:@events).last[:sample_name]).to eq 'one'
+    end
+
+    it 'set_clave_sample accepts a clave name whose sample file exists' do
+      @c.set_clave_sample('_md', 'middle')
+      expect(@c.names['_md']).to eq 'clave-middle'
+    end
+
+    it 'set_clave_sample reports an error and exits when the clave sample file is missing' do
+      silence_output do
+        expect { @c.set_clave_sample('_md', 'no-such-clave') }.to raise_error(SystemExit)
+      end
+    end
+  end
+
+  context '#read_sample' do
+    it 'raises when the underlying sample file does not exist even though sample_file_exists? was not checked' do
+      expect { @c.read_sample('no-such-sample') }.to raise_error(/sample file not found/)
+    end
+  end
+end
+
+def silence_output
+  original_stdout = $stdout
+  $stdout = StringIO.new
+  yield
+ensure
+  $stdout = original_stdout
 end
 
 RSpec::Matchers.define :include_any_nonzero do

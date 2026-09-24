@@ -58,17 +58,17 @@ in the samples directory:
 - two or 2
 - three or 3
 - four or 4
-- five or 5 (coming soon)
-- six or 6 (coming soon)
-- seven or 7 (coming soon)
-- eight or 8 (coming soon)
+- five or 5
+- six or 6
+- seven or 7
+- eight or 8
 - intro
 - verse
 - chorus
 - bridge
 - end
-- solo (coming soon)
-- fade (coming soon)
+- solo
+- fade
 - rest or r (plays nothing; just advances to the next beat)
 
 Samples can overlap. If a word sample is longer than one beat, it keeps
@@ -153,8 +153,6 @@ m 16
 ```
 
 ## To Do
-
-- Create the additional samples (5, 6, 7, 8, etc.)
 
 - Add a way to define a section with a name and length, and use that to
   refer to an entire section's worth of metronome clicks. For example, if a
