@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+require 'optparse'
 require 'wavefile'
 
 include WaveFile
@@ -22,6 +23,36 @@ NAMES = {
   '_mk' => 'clave-low'   # metronome click (other beats)
 }.freeze
 
+# MIDI note numbers used when writing a MIDI file instead of a wave file.
+# There's no audio to play, so each sample name is mapped to a note that a
+# General MIDI drum kit (channel 10) or instrument can play as a stand-in.
+# The claves (metronome) sounds use General MIDI percussion note numbers;
+# everything else gets its own note on a regular (non-percussion) channel so
+# they're easy to tell apart in a DAW's piano roll.
+MIDI_NOTE_NUMBERS = {
+  'clave-high' => 75,   # GM percussion: Claves
+  'clave-low' => 37,    # GM percussion: Side Stick
+  'clave-middle' => 76, # GM percussion: Hi Wood Block
+  'one' => 60,
+  'two' => 61,
+  'three' => 62,
+  'four' => 63,
+  'five' => 64,
+  'six' => 65,
+  'seven' => 66,
+  'eight' => 67,
+  'intro' => 68,
+  'verse' => 69,
+  'chorus' => 70,
+  'bridge' => 71,
+  'end' => 72,
+  'solo' => 73,
+  'fade' => 74
+}.freeze
+MIDI_PERCUSSION_CHANNEL = 9 # channel 10, zero-based
+MIDI_NOTE_CHANNEL = 0 # channel 1, zero-based
+MIDI_FIRST_DYNAMIC_NOTE = 36 # starting note for samples with no fixed mapping
+
 class Cues
   attr_reader :tempo
   attr_accessor :time_signature, :subdivision, :names
@@ -34,6 +65,7 @@ class Cues
     @beat = 0
     @events = [] # { time: Float (seconds), sample_name: String }
     @sample_cache = {}
+    @midi_note_cache = {}
   end
 
   def tempo=(bpm)
@@ -41,7 +73,7 @@ class Cues
     @seconds_per_beat = 60.0 / bpm
   end
 
-  def build_cues_audio_file(in_io, out_path)
+  def build_cues_file(in_io, out_path, format: :wav)
     in_io.readlines.each do |line|
       line = line.sub(/ *#.*/, '').strip
       next if line.empty?
@@ -72,7 +104,14 @@ class Cues
       end
     end
 
-    write_audio_file(out_path)
+    case format
+    when :wav
+      write_audio_file(out_path)
+    when :midi
+      write_midi_file(out_path)
+    else
+      raise "unknown output format: #{format.inspect}"
+    end
   end
 
   def insert_cue(words)
@@ -156,6 +195,58 @@ class Cues
     end
   end
 
+  # Writes a Standard MIDI File instead of a wave file. Since there's no
+  # audio to embed, each event becomes a short note-on/note-off pair (see
+  # MIDI_NOTE_NUMBERS) so the cues can be used as a guide track in a DAW or
+  # MIDI-aware metronome app.
+  def write_midi_file(out_path)
+    require 'midilib/sequence'
+    require 'midilib/consts'
+
+    sequence = MIDI::Sequence.new
+    track = MIDI::Track.new(sequence)
+    sequence.tracks << track
+    track.name = 'Cues'
+    track.events << MIDI::Tempo.new(MIDI::Tempo.bpm_to_mpq(@tempo))
+    track.events << MIDI::TimeSig.new(@time_signature[0], Math.log2(@time_signature[1]).round, 24, 8)
+
+    ticks_per_beat = sequence.ppqn
+    note_length = (ticks_per_beat * 0.5).round # eighth-note-long hit
+
+    @events.each do |event|
+      tick = (event[:time] * @tempo / 60.0 * ticks_per_beat).round
+      channel, note = midi_note_for(event[:sample_name])
+
+      on = MIDI::NoteOnEvent.new(channel, note, 100)
+      on.time_from_start = tick
+      track.events << on
+
+      off = MIDI::NoteOffEvent.new(channel, note, 100)
+      off.time_from_start = tick + note_length
+      track.events << off
+    end
+
+    track.recalc_delta_from_times
+    track.ensure_track_end_meta_event
+
+    File.open(out_path, 'wb') { |file| sequence.write(file) }
+  end
+
+  # Returns [channel, note] for sample_name. Claves (metronome) samples use
+  # General MIDI percussion note numbers on the percussion channel; other
+  # built-in samples get a fixed note from MIDI_NOTE_NUMBERS. Any other
+  # sample name is assigned the next free note, starting at
+  # MIDI_FIRST_DYNAMIC_NOTE, the first time it's seen.
+  def midi_note_for(sample_name)
+    if MIDI_NOTE_NUMBERS.key?(sample_name)
+      channel = sample_name.start_with?('clave-') ? MIDI_PERCUSSION_CHANNEL : MIDI_NOTE_CHANNEL
+      return [channel, MIDI_NOTE_NUMBERS[sample_name]]
+    end
+
+    note = @midi_note_cache[sample_name] ||= MIDI_FIRST_DYNAMIC_NOTE + @midi_note_cache.size
+    [MIDI_NOTE_CHANNEL, note]
+  end
+
   def load_sample(sample_name)
     @sample_cache[sample_name] ||= read_sample(sample_name)
   end
@@ -214,10 +305,21 @@ class Cues
   end
 end
 
+def parse_cues_cli_options(argv)
+  format = :wav
+  parser = OptionParser.new do |opts|
+    opts.banner = 'usage: cues.rb [options] in_cues_file out_file'
+    opts.on('-m', '--midi', 'Generate a MIDI file instead of a wave file') { format = :midi }
+    opts.on('-w', '--wav', 'Generate a wave file (default)') { format = :wav }
+  end
+  in_path, out_path = parser.parse!(argv)
+  [in_path, out_path, format]
+end
+
 if __FILE__ == $PROGRAM_NAME
-  # usage: cues.rb in_cues_file out_wav_file
+  in_path, out_path, format = parse_cues_cli_options(ARGV)
   cues = Cues.new
-  File.open(ARGV[0], 'r') do |in_io|
-    cues.build_cues_audio_file(in_io, ARGV[1])
+  File.open(in_path, 'r') do |in_io|
+    cues.build_cues_file(in_io, out_path, format: format)
   end
 end

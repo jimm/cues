@@ -9,6 +9,21 @@ DAW.
 The word and metronome ("clave") samples live in the [samples](./samples)
 directory.
 
+## Command Line Usage
+
+```
+cues.rb [options] in_cues_file out_file
+```
+
+By default, `cues.rb` writes a `.wav` file. Pass `-m` or `--midi` to write a
+MIDI file instead. A MIDI file has no actual audio in it, so each cue or
+metronome click becomes a short note instead; metronome clicks are mapped to
+General MIDI percussion notes on channel 10, and every other cue name gets
+its own note on channel 1, making the file useful as a guide track in a DAW.
+
+- **-m, --midi**: Write a MIDI file instead of a wave file.
+- **-w, --wav**: Write a wave file (the default).
+
 ## The Cue File
 
 The text file format is simple: each line can have one of the following
