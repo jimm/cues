@@ -1,13 +1,39 @@
 # Cues
 
 Cues is a script that turns a text file that describes metronome clicks and
-voice cues into a `.wav` audio file. It plays click and vocal cue samples
-("verse", "two", "three", "four") at the beats you specify, mixing them
-together into a single audio file you can use directly or import into your
-DAW.
+voice cues into a `.wav` audio file or a MIDI file.
+
+## Output Files
+
+### Audio Files
+
+A generated audio file plays clicks and vocal cue samples ("verse", "two",
+"three", "four") at the beats you specify, mixing them together into a
+single audio file you can use directly or import into your DAW.
 
 The word and metronome ("clave") samples live in the [samples](./samples)
 directory.
+
+### MIDI Files
+
+A generated MIDI file puts the click notes on MIDI channel 10 (the
+unofficial official drum track channel), by default using the General MIDI
+percussion note numbers for high, mid, and low metronome sounds,
+respectively Claves, Side Stick, and Hi Wood Block.
+
+The vocal cues are put onto a separate track on MIDI channel 1. Each cue is
+assigned to individual notes:
+
+| Name            | Note Number(s)         |
+|-----------------|------------------------|
+| "one" - "eight" | 60 (middle C, C4) - 67 |
+| "intro"         | 68                     |
+| "verse"         | 69                     |
+| "chorus"        | 70                     |
+| "bridge"        | 71                     |
+| "end"           | 72                     |
+| "solo"          | 73                     |
+| "fade"          | 74                     |
 
 ## Command Line Usage
 
