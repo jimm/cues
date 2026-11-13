@@ -313,10 +313,21 @@ def parse_cues_cli_options(argv)
   format = :wav
   parser = OptionParser.new do |opts|
     opts.banner = 'usage: cues.rb [options] in_cues_file out_file'
-    opts.on('-m', '--midi', 'Generate a MIDI file instead of a wave file') { format = :midi }
-    opts.on('-w', '--wav', 'Generate a wave file (default)') { format = :wav }
+    opts.on('-f', '--format FORMAT', 'Output format "midi" or "wav" (default)') do |arg|
+      format = arg.downcase.to_sym
+      unless format in %i[midi wav]
+        puts parser.help
+        exit(1)
+      end
+    end
   end
-  in_path, out_path = parser.parse!(argv)
+  begin
+    in_path, out_path = parser.parse!(argv)
+  rescue OptionParser::MissingArgument => e
+    puts e
+    puts parser.help
+    exit(1)
+  end
   [in_path, out_path, format]
 end
 

@@ -3,6 +3,19 @@
 Cues is a script that turns a text file that describes metronome clicks and
 voice cues into a `.wav` audio file or a MIDI file.
 
+## Installation
+
+1. Make a copy of this repo.
+2. Run "bundle install".
+3. Profit!
+
+## Running
+
+```
+bin/cues.rb --help
+bin/cues.rb [--format FORMAT] input_cues_file output_file
+```
+
 ## Output Files
 
 ### Audio Files
